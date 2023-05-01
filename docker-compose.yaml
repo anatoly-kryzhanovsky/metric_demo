@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  prometheus:
+    image: prom/prometheus
+    volumes:
+    - ./storage/prometheus/config:/etc/prometheus
+    command:
+    - '--web.external-url=/prometheus'
+    - '--config.file=/etc/prometheus/prometheus.yml'
+    
+  grafana:
+    image: grafana/grafana-oss
+    ports:
+    - 8002:3000
+    volumes:
+    - ./storage/grafana:/var/lib/grafana
+    - ./storage/grafana/config/grafana.ini:/etc/grafana/grafana.ini    
+    
+  grafana-2:
+    image: grafana/grafana-oss
+    ports:
+    - 8003:3000
+    volumes:
+    - ./storage/grafana:/var/lib/grafana
+    
+        
+  locust-calculate:
+    image: locustio/locust
+    volumes:
+      - ./storage/locust:/mnt/locust
+    command: -f /mnt/locust/simulate-common/locustfile.py --host http://application
+    
+  locust-http-client:
+    image: locustio/locust
+    volumes:
+      - ./storage/locust:/mnt/locust
+    command: -f /mnt/locust/http-client/locustfile.py --host http://application
+    
+  locust-puzzler-bad:
+    image: locustio/locust
+    volumes:
+      - ./storage/locust:/mnt/locust
+    command: -f /mnt/locust/puzzler-bad/locustfile.py --host http://application
+    
+  locust-puzzler-good:
+    image: locustio/locust
+    volumes:
+      - ./storage/locust:/mnt/locust
+    command: -f /mnt/locust/puzzler-good/locustfile.py --host http://application
+    
+  locust-http-client:
+    image: locustio/locust
+    volumes:
+      - ./storage/locust:/mnt/locust
+    command: -f /mnt/locust/http-client/locustfile.py --host http://application
+    
+  nginx:
+    image: nginx
+    ports:
+    - 8001:80
+    volumes:
+    - ./storage/nginx:/etc/nginx/conf.d
+    - ./storage/nginx/index.html:/usr/share/nginx/html/index.html
+    depends_on:
+    - prometheus
+    - grafana
+    - application
+    
+  application:
+    build:
+      context: Metrics.App
+      dockerfile: Metrics.App\Dockerfile
+    environment:
+    - ASPNETCORE_HTTPS_PORT=https//+:80
+    - ASPNETCORE_ENVIRONMENT=Development    
